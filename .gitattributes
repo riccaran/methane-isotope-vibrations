@@ -1,0 +1,9 @@
+# Normalize source/docs across Windows and Linux; preserve media byte-for-byte.
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+*.cfg text eol=lf
+*.gif binary
+*.mp4 binary

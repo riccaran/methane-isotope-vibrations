@@ -1,0 +1,6 @@
+# Rendering and numerical analysis: versions verified for the approved film.
+manim==0.22.1
+numpy==2.5.4
+scipy==1.18.1
+av==19.0.2
+pillow==13.0.0

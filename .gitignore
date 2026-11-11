@@ -1,0 +1,12 @@
+# Generated calculations, encodes, logs and interpreter environments stay local.
+build/
+media/manim/
+__pycache__/
+*.py[cod]
+.venv*/
+venv/
+*.log
+*.chk
+*.tmp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,4 @@
+# Optional separate Linux/WSL environment for the from-scratch quantum stage.
+pyscf==2.14.0
+numpy==2.5.4
+scipy==1.18.1
