@@ -1,45 +1,44 @@
-# Methane isotope vibrations: from quantum chemistry to animation
+# Computational analysis and visualization of vibrational isotope effects in CH₄ and CH₃D
 
 **One extra neutron changes how a molecule moves.** This project makes that
 isotope effect visible by comparing ordinary methane, **CH₄**, with **CH₃D**,
 where one hydrogen is replaced by deuterium.
 
-It is a complete, local pipeline: construct methane, optimize its geometry,
-compute an electronic Hessian with PySCF, extract and match all nine harmonic
-modes, and render synchronized molecular motion and plots with Manim.
+The workflow uses PySCF to optimize the methane geometry and calculate its molecular Hessian.
+Harmonic analysis then determines and compares all nine vibrational modes of CH₄ and CH₃D.
+Manim visualizes the resulting molecular motion alongside synchronized oscillation plots.
 
 The astronomical motivation is the unusually deuterium-rich methane reported
 in interstellar comet **3I/ATLAS** by [Roth and colleagues](https://arxiv.org/abs/2603.20445v3).
-The animation is a computational illustration of the molecular isotope effect.
+The animation is a computational illustration of the molecular isotope effect ([full movie](media/methane-isotope-effect.mp4)).
 
-**[Watch or download the full approved film](media/methane-isotope-effect.mp4)**
-— 55.58 seconds, 1920 × 1080, 60 fps, silent.
-
-Four GIF chapters are embedded below so the main steps are visible directly
-in GitHub's README. They are excerpts of that MP4, not separately invented motion.
-
-## See the result
+## Results
 
 ### 1. Same element, different nucleus
 
-Hydrogen has one proton; deuterium has one proton and one neutron. The second
-magnifier follows the same moving molecular source as the first. These nuclear
-diagrams communicate particle counts, not a calculated nuclear shape or scale.
+Deuterium has the same nuclear charge as hydrogen (¹H) but roughly twice its mass.
+This greater inertia shifts methane’s vibrational frequencies and changes how its
+atoms move together, giving CH₃D a distinct infrared fingerprint.
 
 ![Tracked isotope and nuclear magnifiers](media/01-isotope-nuclei.gif)
 
 ### 2. Separate two components of the same motion
 
-The selected molecule first contains both displayed components. Bending changes
-bond angles; stretching changes bond lengths. Their arrows appear in that order
-without changing the underlying trajectory, then the two views separate.
+Stretching vibrations change bond lengths, while bending vibrations change bond angles.
+Each mode involves a characteristic pattern of coordinated atomic motion, with some atoms
+moving more than others. Replacing H with the heavier D therefore shifts each frequency
+by a different amount, depending on how strongly the substituted atom participates in
+that vibration.
 
 ![Bending and stretching guides on the same superposed motion](media/02-component-guides.gif)
 
 ### 3. Compare equal physical time
 
-CH₃D completes fewer cycles than CH₄ for these **two selected coordinates**.
-Molecules, waveforms and the femtosecond timer use one shared physical phase.
+Over the same time interval, CH₃D completes fewer oscillations in both selected modes.
+The calculated frequency reductions of about 25% for stretching and 12% for bending
+correspond to oscillation periods approximately 33% and 13% longer than in CH₄.
+The additional nuclear mass therefore changes the timescale of each vibration by a
+different amount.
 
 ![Simultaneous stretching and bending comparison](media/03-two-mode-comparison.gif)
 
@@ -48,14 +47,26 @@ Molecules, waveforms and the femtosecond timer use one shared physical phase.
 | Symmetric-stretch branch | 3032.1384163 | 2273.2854142 | **25.03%** |
 | Lower E-bend component | 1340.9286711 | 1183.2824173 | **11.76%** |
 
-The percentage is `100 × [1 − ν(CH₃D)/ν(CH₄)]`: fewer oscillations in the same
-time. It is not a percentage increase in the period, a decrease in every mode,
-or a measured reaction-rate change.
+For each pair of corresponding vibrational modes, the relative frequency reduction is
+
+$$
+\delta_{\nu}
+=
+\frac{\nu_{\mathrm{CH_4}}-\nu_{\mathrm{CH_3D}}}
+{\nu_{\mathrm{CH_4}}}
+\times 100\%
+$$
+
+where \(\nu_{\mathrm{CH_4}}\) and \(\nu_{\mathrm{CH_3D}}\) are the calculated harmonic
+frequencies of the two isotopologues.
 
 ### 4. Keep the waves moving to the last frame
 
-At **650 fs**, the plots enlarge and the numeric timer disappears. Both wave
-rows continue advancing throughout the final explanation, without a frozen tail.
+In the harmonic approximation, each normal mode oscillates sinusoidally at a fixed
+frequency. The frequency differences between CH₄ and CH₃D cause their relative phase
+to evolve over time. The constant amplitudes reflect an idealized model without damping.
+In real systems, collisions and coupling between modes allow vibrational energy to be
+exchanged and redistributed.
 
 ![Enlarged continuous waveforms](media/04-enlarged-waves.gif)
 
