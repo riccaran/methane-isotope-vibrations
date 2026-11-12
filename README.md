@@ -20,6 +20,20 @@ Deuterium has the same nuclear charge as hydrogen (¹H) but roughly twice its ma
 This greater inertia shifts methane’s vibrational frequencies and changes how its
 atoms move together, giving CH₃D a distinct infrared fingerprint.
 
+In the Born–Oppenheimer harmonic model used here, the two isotopologues share
+the same equilibrium geometry and electronic force-constant matrix:
+
+```math
+\begin{aligned}
+\mathbf H_{\mathrm{CH_4}} &= \mathbf H_{\mathrm{CH_3D}}, \\
+\mathbf M_{\mathrm{CH_4}} &\neq \mathbf M_{\mathrm{CH_3D}}.
+\end{aligned}
+```
+
+Here $\mathbf H$ is the Hessian of the potential energy with respect to Cartesian
+nuclear coordinates, and $\mathbf M$ is the diagonal atomic-mass matrix. The
+isotope effect enters through the masses on this common potential-energy surface.
+
 ![Tracked isotope and nuclear magnifiers](media/01-isotope-nuclei.gif)
 
 ### 2. Separate two components of the same motion
@@ -29,6 +43,18 @@ Each mode involves a characteristic pattern of coordinated atomic motion, with s
 moving more than others. Replacing H with the heavier D therefore shifts each frequency
 by a different amount, depending on how strongly the substituted atom participates in
 that vibration.
+
+The harmonic frequencies and atomic displacement patterns follow the generalized
+eigenvalue equation
+
+```math
+\mathbf H\,\mathbf u_k = (2\pi\nu_k)^2\,\mathbf M\,\mathbf u_k,
+```
+
+where $\nu_k$ is the frequency in Hz and $\mathbf u_k$ is the Cartesian
+displacement vector of mode $k$. Removing three translations and three rotations
+leaves nine vibrational modes for this nonlinear five-atom molecule. The
+calculation solves the equivalent eigenproblem for the mass-weighted Hessian.
 
 ![Bending and stretching guides on the same superposed motion](media/02-component-guides.gif)
 
@@ -56,6 +82,25 @@ For each pair of corresponding vibrational modes, the relative frequency reducti
 where $\nu_{\mathrm{CH_4}}$ and $\nu_{\mathrm{CH_3D}}$ are the calculated harmonic
 frequencies of the two isotopologues.
 
+Frequency and oscillation period are inversely related:
+
+```math
+\begin{aligned}
+T_k &= \frac{1}{\nu_k} = \frac{1}{c\,\widetilde{\nu}_k}, \\
+\frac{T_{k,\mathrm{CH_3D}}}{T_{k,\mathrm{CH_4}}}
+&= \frac{\nu_{k,\mathrm{CH_4}}}{\nu_{k,\mathrm{CH_3D}}}.
+\end{aligned}
+```
+
+Here $T_k$ is the period in seconds, $\widetilde{\nu}_k$ is the wavenumber in
+cm⁻¹, and $`c = 2.99792458\times10^{10}\ \mathrm{cm\,s^{-1}}`$ is the speed of
+light. The calculated periods of the two selected modes are:
+
+| Selected comparison | CH₄ period / fs | CH₃D period / fs |
+|---|---:|---:|
+| Symmetric-stretch branch | **11.00** | **14.67** |
+| Lower E-bend component | **24.88** | **28.19** |
+
 ### 4. Keep the waves moving to the last frame
 
 In the harmonic approximation, each normal mode oscillates sinusoidally at a fixed
@@ -63,6 +108,26 @@ frequency. The frequency differences between CH₄ and CH₃D cause their relati
 to evolve over time. The constant amplitudes reflect an idealized model without damping.
 In real systems, collisions and coupling between modes allow vibrational energy to be
 exchanged and redistributed.
+
+For either isotopologue, the harmonic normal coordinate can be written as
+
+```math
+Q_k(t) = A_k\sin(2\pi\nu_k t + \phi_k),
+```
+
+where $A_k$ is the amplitude and $\phi_k$ the initial phase. For corresponding
+modes, the phase of CH₃D relative to CH₄ evolves according to
+
+```math
+\begin{aligned}
+\Delta\phi_k(t) &= \Delta\phi_k(0) \\
+&\quad + 2\pi\bigl(\nu_{k,\mathrm{CH_3D}} - \nu_{k,\mathrm{CH_4}}\bigr)t.
+\end{aligned}
+```
+
+In these expressions, $t$ is physical time in seconds and phase is measured in
+radians. The animation maps playback time onto this physical clock. The display
+amplitudes and initial phases are illustrative choices.
 
 ![Enlarged continuous waveforms](media/04-enlarged-waves.gif)
 
@@ -335,6 +400,7 @@ private reports, intermediate renders, vendored executables or application code.
 - [Associated Nature Astronomy article](https://doi.org/10.1038/s41550-026-03002-5)
 - [NASA: 3I/ATLAS facts and FAQs](https://science.nasa.gov/solar-system/comets/3i-atlas/3i-atlas-facts-and-faqs/)
 - [PySCF: density-functional theory](https://pyscf.org/user/dft.html)
+- [PySCF: harmonic vibrational analysis](https://pyscf.org/_modules/pyscf/hessian/thermo.html#harmonic_analysis)
 - [Manim Community documentation](https://docs.manim.community/en/stable/)
 
 ## License
