@@ -14,7 +14,7 @@ The animation is a computational illustration of the molecular isotope effect ([
 
 ## Results
 
-### 1. Same element, different nucleus
+### 1. Isotopic substitution on a common potential-energy surface
 
 Deuterium has the same nuclear charge as hydrogen (¹H) but roughly twice its mass.
 This greater inertia shifts methane’s vibrational frequencies and changes how its
@@ -36,7 +36,7 @@ isotope effect enters through the masses on this common potential-energy surface
 
 ![Tracked isotope and nuclear magnifiers](media/01-isotope-nuclei.gif)
 
-### 2. Separate two components of the same motion
+### 2. Normal-mode analysis of stretching and bending vibrations
 
 Stretching vibrations change bond lengths, while bending vibrations change bond angles.
 Each mode involves a characteristic pattern of coordinated atomic motion, with some atoms
@@ -58,7 +58,7 @@ calculation solves the equivalent eigenproblem for the mass-weighted Hessian.
 
 ![Bending and stretching guides on the same superposed motion](media/02-component-guides.gif)
 
-### 3. Compare equal physical time
+### 3. Isotope effects on vibrational frequencies and periods
 
 Over the same time interval, CH₃D completes fewer oscillations in both selected modes.
 The calculated frequency reductions of about 25% for stretching and 12% for bending
@@ -101,7 +101,7 @@ light. The calculated periods of the two selected modes are:
 | Symmetric-stretch branch | **11.00** | **14.67** |
 | Lower E-bend component | **24.88** | **28.19** |
 
-### 4. Keep the waves moving to the last frame
+### 4. Harmonic oscillations and relative phase evolution
 
 In the harmonic approximation, each normal mode oscillates sinusoidally at a fixed
 frequency. The frequency differences between CH₄ and CH₃D cause their relative phase
