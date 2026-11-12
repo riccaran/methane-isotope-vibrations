@@ -49,15 +49,11 @@ different amount.
 
 For each pair of corresponding vibrational modes, the relative frequency reduction is
 
-$$
-\delta_{\nu}
-=
-\frac{\nu_{\mathrm{CH_4}}-\nu_{\mathrm{CH_3D}}}
-{\nu_{\mathrm{CH_4}}}
-\times 100\%
-$$
+```math
+\delta_{\nu} = \frac{\nu_{\mathrm{CH_4}} - \nu_{\mathrm{CH_3D}}}{\nu_{\mathrm{CH_4}}} \times 100\%
+```
 
-where \(\nu_{\mathrm{CH_4}}\) and \(\nu_{\mathrm{CH_3D}}\) are the calculated harmonic
+where $\nu_{\mathrm{CH_4}}$ and $\nu_{\mathrm{CH_3D}}$ are the calculated harmonic
 frequencies of the two isotopologues.
 
 ### 4. Keep the waves moving to the last frame
