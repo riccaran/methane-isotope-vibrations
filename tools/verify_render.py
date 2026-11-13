@@ -10,10 +10,81 @@ the animation model's clock, avoiding a self-comparison of the implementation.
 from pathlib import Path
 import argparse
 import hashlib
+import gzip
 import json
 
 import av
 import numpy as np
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_timer(pixels: np.ndarray, templates: np.ndarray, integer_digits: int) -> str:
+    """Read only the five fixed timer digits, using real glyphs in two fonts.
+
+    Bounding-box normalization tolerates subpixel placement and H.264 edges.
+    The atlas contains Consolas and DejaVu Sans Mono at the scene's font size.
+    A mismatch over 12% of the normalized binary glyph is rejected.
+    """
+    result = ""
+    for position, x in enumerate([902.4, 928.8, 955.2, 1008.0, 1034.4]):
+        if position < 3 - integer_digits:
+            result += " "  # The moving 't =' label occupies unused integer slots.
+            continue
+        mask = pixels[1005:1055, round(x) - 13 : round(x) + 14].min(axis=2) > 110
+        yy, xx = np.nonzero(mask)
+        if len(xx) < 10:
+            result += " "
+            continue
+        crop = Image.fromarray(mask[yy.min() : yy.max() + 1, xx.min() : xx.max() + 1])
+        normalized = np.asarray(crop.resize((24, 32), Image.Resampling.NEAREST))
+        errors = np.mean(templates != normalized, axis=(2, 3)).min(axis=0)
+        digit = int(np.argmin(errors))
+        if errors[digit] > 0.12:
+            raise AssertionError(("Unrecognized timer digit", result, float(errors[digit])))
+        result += str(digit)
+    return result[:3] + "." + result[3:]
+
+
+def check_waveforms(pixels: np.ndarray, video_time: float, pairs: list, reference: float):
+    """Check phase and isotope colour, excluding pixels hidden at crossings."""
+    q, _, zoom = physical_state(video_time, reference)
+    u = float(np.clip((video_time - zoom) / 2, 0, 1))
+    u = u**3 * (10 - 15 * u + 6 * u * u)
+    sx, amplitude = 1 + 0.05 * u, 0.2 * (1 + 2 * u)
+    maximum, checked = 0.0, 0
+    for k, original in enumerate([-2.8, -3.6]):
+        centre = (1 - u) * original + u * (1.05 if k == 0 else -1.05)
+        ratios = [pairs[k]["cases"][name]["frequency_cm1"] / reference for name in ["CH4", "CH3D"]]
+        for position in np.linspace(-6.8, 6.8, 12):
+            phase = q - 8 + 8 * (position + 6.9) / 13.8
+            ys = [
+                (4.5 - centre - amplitude * np.sin(np.pi * ratio * phase)) * 120 for ratio in ratios
+            ]
+            if abs(ys[0] - ys[1]) < 8:
+                continue  # The gold curve can occlude the white curve here.
+            for isotope, expected_y in enumerate(ys):
+                expected_x = (position * sx + 8) * 120
+                x, y = round(expected_x), round(expected_y)
+                patch = pixels[y - 4 : y + 5, x - 4 : x + 5].astype(float)
+                r, g, b = np.moveaxis(patch, -1, 0)
+                mask = (
+                    (np.minimum(np.minimum(r, g), b) > 125)
+                    & (patch.max(axis=2) - patch.min(axis=2) < 35)
+                    if isotope == 0
+                    else (r > 130) & (g > 95) & (g - b > 25) & (r - b > 35)
+                )
+                yy, xx = np.nonzero(mask)
+                if not len(xx):
+                    raise AssertionError(
+                        ("Missing wave or wrong isotope colour", video_time, k, isotope)
+                    )
+                error = float(np.min(np.hypot(x - 4 + xx - expected_x, y - 4 + yy - expected_y)))
+                if error >= 3:
+                    raise AssertionError(("Wave phase mismatch", video_time, k, isotope, error))
+                maximum, checked = max(maximum, error), checked + 1
+    return maximum, checked
 
 
 def physical_state(video_time: float, reference_cm1: float):
@@ -48,7 +119,11 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
     These are checks of the actual encoded output, not just scene intention.
     """
     dataset = json.loads(data.read_text(encoding="utf-8"))
-    records = json.loads(metadata.read_text(encoding="utf-8"))
+    records = json.loads(
+        gzip.decompress(metadata.read_bytes())
+        if metadata.suffix == ".gz"
+        else metadata.read_bytes()
+    )
     pairs = dataset["comparisons"]
     reference = pairs[0]["cases"]["CH4"]["frequency_cm1"]
     _, _, zoom = physical_state(0, reference)
@@ -56,12 +131,23 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
     end = float(np.ceil((zoom_end + 0.4 + 9) * 60) / 60)
     max_clock_error = 0.0
     for row in records["frames"]:
+        if not np.all(np.isfinite([row["v"], row["q"], row["time_fs"]])):
+            raise AssertionError("Non-finite frame metadata")
         q, t, _ = physical_state(row["v"], reference)
         max_clock_error = max(max_clock_error, abs(row["q"] - q), abs(row["time_fs"] - t))
     if max_clock_error > 1e-9:
         raise AssertionError(("clock mismatch", max_clock_error))
-    if abs(physical_state(zoom, reference)[1] - 650) > 1e-9:
-        raise AssertionError("Zoom not at 650 fs")
+    if abs(records["graph_focus_interval"][0] - zoom) > 1e-9:
+        raise AssertionError("Recorded graph transition disagrees with independent clock")
+    expected_frames = round(end * 60)
+    rows = records["frames"]
+    terminal = len(rows) == expected_frames + 1 and abs(rows[-1]["v"] - end) < 1e-9
+    if len(rows) != expected_frames + int(terminal):
+        raise AssertionError(
+            "Metadata must contain one sample per frame, plus at most one terminal state"
+        )
+    if max(abs(row["v"] - i / 60) for i, row in enumerate(rows)) > 1e-9:
+        raise AssertionError("Metadata is not on the encoded frame grid")
     if records["source_data_sha256"] != hashlib.sha256(data.read_bytes()).hexdigest():
         raise AssertionError("Renderer used a different dataset")
     count = 0
@@ -71,7 +157,10 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
     maximum_curve_error = 0.0
     previous = None
     motion = []
-    timer_frames = 0
+    timer_frames = timer_present = 0
+    observed_hide = None
+    atlas = np.asarray(Image.open(ROOT / "validation/timer_digits.png")) > 0
+    templates = atlas.reshape(2, 32, 10, 24).transpose(0, 2, 1, 3)
     with av.open(str(video)) as movie:
         stream = movie.streams.video[0]
         if (stream.width, stream.height, float(stream.average_rate), len(movie.streams.audio)) != (
@@ -86,6 +175,17 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
             pts_error = max(pts_error, abs(v - count / 60))
             count += 1
             pixels = frame.to_ndarray(format="rgb24")
+            row = rows[count - 1]
+            if abs(row["v"] - v) > 1e-9:
+                raise AssertionError("Encoded frame and metadata timestamps disagree")
+            if 16 <= v < zoom:
+                _, elapsed, _ = physical_state(v, reference)
+                integer, fraction = f"{elapsed:.2f}".split(".")
+                expected_timer = integer.rjust(3) + "." + fraction
+                actual_timer = read_timer(pixels, templates, len(integer))
+                if actual_timer != expected_timer:
+                    raise AssertionError(("Timer digits mismatch", v, actual_timer, expected_timer))
+                timer_present += 1
             if v < zoom:
                 if (pixels[15:105, 360:600].min(axis=2) > 130).sum() < 200:
                     raise AssertionError(("CH4 header missing", v))
@@ -101,6 +201,12 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
                 timer_frames += 1
                 if (pixels[1020:1070, 750:1180].max(axis=2) > 100).sum() >= 20:
                     raise AssertionError(("Timer remained visible after graph zoom", v))
+                if observed_hide is None:
+                    observed_hide = v
+            if v >= 34:
+                error, checks = check_waveforms(pixels, v, pairs, reference)
+                maximum_curve_error = max(maximum_curve_error, error)
+                phase_checks += checks
             if v < zoom_end:
                 continue
             enlarged += 1
@@ -108,42 +214,12 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
             if previous is not None:
                 motion.append(float(np.mean(abs(roi.astype(np.int16) - previous.astype(np.int16)))))
             previous = roi.copy()
-            q, _, _ = physical_state(v, reference)
-            for k, centre in [(0, 1.05), (1, -1.05)]:
-                for name in ["CH4", "CH3D"]:
-                    ratio = pairs[k]["cases"][name]["frequency_cm1"] / reference
-                    for scene_x in np.linspace(-6.8, 6.8, 12) * 1.05:
-                        phase = q - 8 + 8 * (scene_x + 7.245) / 14.49
-                        expected = np.array(
-                            [
-                                (scene_x + 8) * 120,
-                                (4.5 - (centre + 0.6 * np.sin(np.pi * ratio * phase))) * 120,
-                            ]
-                        )
-                        x, y = np.rint(expected).astype(int)
-                        patch = pixels[y - 4 : y + 5, x - 4 : x + 5].astype(float)
-                        yy, xx = np.nonzero(
-                            (patch[:, :, 0] > 120)
-                            & (patch[:, :, 1] > 100)
-                            & (patch.max(axis=2) > 140)
-                        )
-                        if not len(xx):
-                            raise AssertionError(("Missing wave", v, k, name))
-                        error = float(
-                            np.min(
-                                np.linalg.norm(
-                                    np.column_stack((x - 4 + xx, y - 4 + yy)) - expected, axis=1
-                                )
-                            )
-                        )
-                        if error >= 3:
-                            raise AssertionError(("Wave phase mismatch", v, k, name, error))
-                        maximum_curve_error = max(maximum_curve_error, error)
-                        phase_checks += 1
     if count != round(end * 60) or pts_error > 1e-9:
         raise AssertionError(("Frame-grid/duration mismatch", count, end, pts_error))
     if not motion or min(motion) <= 0.2:
         raise AssertionError("Frozen or discontinuous finale")
+    if observed_hide is None or not 0 <= observed_hide - zoom < 1 / 60:
+        raise AssertionError("Observed timer transition is not at the 650 fs frame boundary")
     result = {
         "passed": True,
         "frames": count,
@@ -154,6 +230,13 @@ def verify(video: Path, metadata: Path, data: Path, output: Path) -> dict:
         "graph_zoom_physical_fs": 650.0,
         "graph_zoom_video_seconds": zoom,
         "timer_absence_frames_checked": timer_frames,
+        "timer_digits_frames_checked": timer_present,
+        "observed_timer_hide_seconds": observed_hide,
+        "metadata_terminal_sample": terminal,
+        "metadata_sha256": hashlib.sha256(metadata.read_bytes()).hexdigest(),
+        "timer_atlas_sha256": hashlib.sha256(
+            (ROOT / "validation/timer_digits.png").read_bytes()
+        ).hexdigest(),
         "enlarged_frames_checked": enlarged,
         "wave_phase_pixel_checks": phase_checks,
         "maximum_wave_position_error_px": maximum_curve_error,

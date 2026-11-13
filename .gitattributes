@@ -7,3 +7,6 @@
 *.cfg text eol=lf
 *.gif binary
 *.mp4 binary
+# Historical inputs are hashed as exact bytes, including their line endings.
+validation/approved_video/source_data.json -text
+validation/independent_calculation.json -text

@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "frames": 3335,
+  "duration_seconds": 55.583333333333336,
+  "all_frames_decoded": true,
+  "pts_max_error_seconds": 0.0,
+  "clock_max_error": 3.410605131648481e-13,
+  "graph_zoom_physical_fs": 650.0,
+  "graph_zoom_video_seconds": 44.17158974725558,
+  "timer_absence_frames_checked": 684,
+  "timer_digits_frames_checked": 1691,
+  "observed_timer_hide_seconds": 44.18333333333333,
+  "metadata_terminal_sample": true,
+  "metadata_sha256": "0515ae822ba6c2c81b8287a72ba4e8c9cf89353ee10a8d286efa1ca2101eba0a",
+  "timer_atlas_sha256": "12de46173fa32f1d4b1a49e315e487763d229f588f1cac7168ed4d38ed5b3651",
+  "enlarged_frames_checked": 564,
+  "wave_phase_pixel_checks": 47152,
+  "maximum_wave_position_error_px": 0.8327907924603807,
+  "minimum_adjacent_wave_rgb_change": 8.060462251133451,
+  "last_frame_phase_checked": true,
+  "video_sha256": "0b10a497404ef43ed74f62a9f3fb9924f143bc6ed24d8f3df5381a1a868aae89",
+  "data_sha256": "af551de751d17031dfaa1b3e24cf9ace5682db7bacdfc7d83f5f6d8773445bdd"
+}

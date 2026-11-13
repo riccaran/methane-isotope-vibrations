@@ -157,7 +157,9 @@ can also change pixels across platforms.
 Use **Python 3.12** and install the native dependencies described in the
 [Manim installation guide](https://docs.manim.community/en/stable/installation.html).
 An **FFmpeg** executable must be available on `PATH`, or supplied with
-`--ffmpeg /path/to/ffmpeg`. LaTeX is not used.
+`--ffmpeg /path/to/ffmpeg`. The build must support `libx264` and the `duration`
+option of the `setts` bitstream filter; the runner tests these capabilities
+before starting calculations or rendering. LaTeX is not used.
 
 For Linux/macOS, after installing those prerequisites:
 
@@ -213,6 +215,7 @@ methane_modes.json        Extracted modes and selected comparisons
 render_metadata.json      Model, phase and geometry at every video frame
 methane-isotope-effect.mp4
 verification.json         Encoded-film verification
+scene_inputs.json         Fingerprints for safe reuse of a completed native scene
 previews/                 Four chapter GIFs
 ```
 
@@ -221,6 +224,18 @@ calculation/video files are protected; choose a new directory for a fresh run:
 
 ```bash
 python tools/render.py --from-scratch --work-dir build/another-run --previews
+```
+
+After an interrupted run, repeat the same command with `--resume`. A completed
+quantum calculation is checked and re-extracted; a completed native scene is
+reused only when its input, source fingerprints and output hashes match.
+Exported video stays under a `.pending.mp4` name until verification and any
+requested previews succeed. The final MP4 is never overwritten.
+
+To use an existing electronic calculation in a new work directory:
+
+```bash
+python tools/render.py --calculation build/calculation.json --work-dir build/reused-calculation
 ```
 
 The default quantum resource settings are **four CPU threads and 2048 MB** of
@@ -327,8 +342,8 @@ its rigid-body motion before the component guides appear.
 **Three clocks.** Actual video seconds map smoothly to model time. Model time
 integrates a shared phase coordinate `q`; physical femtoseconds follow
 `Δt = q_difference / (2 c ν_reference)`. Each normal coordinate is
-`sin(π × frequency_ratio × q)`. Thus the molecular displacement, waveform and
-timer cannot drift independently. The final plots show the same eight-q-unit
+`sin(π × frequency_ratio × q)`. Molecular displacements, waveforms and the
+timer use this shared phase. The final plots show the same eight-q-unit
 physical-time window for both isotopes.
 
 The extra comparison time uses a quintic map with unit speed and zero mapping
@@ -351,17 +366,32 @@ atomic motion, clock derivatives, smooth extra-time joins and live lens
 attachment. They also reject malformed datasets and enforce docstrings for
 every shipped module, class and named function. README links, GIF motion,
 sampling of the fast opening, and retained mode colours are checked as well.
+Full extraction tests cover isotope tracking, degenerate subspaces, selected
+directions and quality metadata. Encoded-frame tests (when PyAV is installed)
+read timer digits and reject incorrect wave colours/phases. Runner tests check
+failure recovery, input invalidation and protection of unverified output.
 
 `tools/render.py` automatically runs the encoded-film verifier. It independently
 recomputes the clock rather than importing the model's clock function, decodes
-every video frame, checks 60 fps timestamps and the timer transition, and tests
-each enlarged waveform against the predicted phase. Every final adjacent wave
+every video frame, checks 60 fps timestamps, timer digits and its disappearance
+at the 650 fs boundary, and tests each visible waveform's phase and isotope
+colour, excluding occluded crossings. Every final adjacent wave
 crop must keep changing, including the last frame pair.
+
+Recheck the included film using its original input and compact frame metadata:
+
+```bash
+python tools/verify_render.py --video media/methane-isotope-effect.mp4 --data validation/approved_video/source_data.json --metadata validation/approved_video/render_metadata.json.gz --output build/approved-verification.json
+```
 
 The from-scratch quantum stage also reports the two-step Hessian sensitivity.
 The independently validated calculation reproduced shifts of **25.02698%** and
 **11.75651%**, agreeing with the reference values at the displayed precision;
 its maximum h-to-h/2 frequency change was about **0.003 cm⁻¹**.
+The complete raw calculation and a newly reproduced numerical audit are in
+[`validation/`](validation/numerical_audit.json); the original-film verification
+is [also retained](validation/approved_video/verification.json) with input and
+video hashes. See [the data documentation](data/README.md) for their scope.
 
 ## Scope of the astronomical connection
 

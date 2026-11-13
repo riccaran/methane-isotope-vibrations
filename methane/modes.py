@@ -15,6 +15,7 @@ JSON is the only scientific input required by the independent animation stage.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -115,7 +116,9 @@ def deterministic_basis(rows: np.ndarray) -> np.ndarray:
         candidates = projector.copy()
         for vector in basis:
             candidates -= np.outer(vector, vector @ candidates)
-        column = int(np.argmax(np.linalg.norm(candidates, axis=0)))
+        norms = np.linalg.norm(candidates, axis=0)
+        # Resolve near-ties by coordinate order, rather than eigensolver noise.
+        column = int(np.flatnonzero(norms >= norms.max() * (1 - 1e-6))[0])
         vector = candidates[:, column]
         norm = np.linalg.norm(vector)
         if norm < 1e-10:
@@ -229,6 +232,18 @@ def track_isotopes(coordinates: np.ndarray, hessian: np.ndarray, steps: int = 40
                     bonds = coordinates[1:] - coordinates[0]
                     if np.sum((displacement[1:] - displacement[0]) * bonds) < 0:
                         group["rows"] *= -1
+            expected = {
+                "low_bend_A1",
+                "low_bend_E",
+                "mid_bend_E",
+                "symmetric_stretch_A1",
+                "upper_stretch_A1",
+                "upper_stretch_E",
+            }
+            if {group["id"] for group in current} != expected:
+                raise ValueError(
+                    "Frequency windows do not uniquely identify the six methane groups"
+                )
         else:
             score = np.full((6, 6), -1e6)
             for i, old in enumerate(previous):
@@ -271,12 +286,21 @@ def extract(input_path: Path, output_path: Path, steps: int = 401) -> dict:
     film. Checked-in reference data and a newly computed dataset share this
     schema, so rendering needs no change of code or manual copy/paste.
     """
+    if Path(output_path).exists():
+        raise FileExistsError(f"Protecting existing mode dataset: {output_path}")
     raw = json.loads(Path(input_path).read_text(encoding="utf-8"))
     coordinates = np.array(raw["coordinates_angstrom"], float)
     hessian = np.array(raw["hessian_hartree_per_bohr2"], float)
     gradient = np.array(raw["gradient_hartree_per_bohr"], float)
-    if np.max(abs(gradient)) > 1e-6 or np.max(abs(hessian - hessian.T)) > 1e-5:
+    if (
+        gradient.size != 15
+        or not np.all(np.isfinite(gradient))
+        or np.max(abs(gradient)) > 1e-6
+        or np.max(abs(hessian - hessian.T)) > 1e-5
+    ):
         raise ValueError("Raw geometry/Hessian did not pass stationarity or reciprocity checks")
+    if raw.get("internal_stable") is False or raw.get("external_stable") is False:
+        raise ValueError("Electronic stability check failed")
     endpoints, overlap = track_isotopes(coordinates, hessian, steps)
     comparisons = []
     for title, identity in [("Stretching", "symmetric_stretch_A1"), ("Bending", "low_bend_E")]:
@@ -311,10 +335,10 @@ def extract(input_path: Path, output_path: Path, steps: int = 401) -> dict:
     result = {
         "schema_version": 1,
         "method": {
-            "engine": "PySCF",
+            "engine": raw["engine"],
             "engine_version": raw.get("engine_version"),
-            "functional": "B3LYP",
-            "basis": "def2-tzvp",
+            "functional": raw["settings"]["method"],
+            "basis": raw["settings"]["basis"],
             "model": "isolated gas-phase harmonic Born-Oppenheimer",
         },
         "isotopologues": {
@@ -331,9 +355,16 @@ def extract(input_path: Path, output_path: Path, steps: int = 401) -> dict:
         },
         "display_conventions": {
             "substituted_atom_zero_based": 1,
-            "stretch_raw_index_zero_based": 5,
+            "stretch_raw_index_zero_based": next(
+                group["source_indices"][0]
+                for group in endpoints["CH4"]["groups"]
+                if group["id"] == "symmetric_stretch_A1"
+            ),
             "degenerate_frequency_tolerance_cm1": 0.01,
             "degenerate_basis": "C3 A1/E separation and SVD parallel transport",
+        },
+        "provenance": {
+            "source_calculation_sha256": hashlib.sha256(Path(input_path).read_bytes()).hexdigest()
         },
     }
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

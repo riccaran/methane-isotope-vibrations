@@ -100,11 +100,15 @@ class PipelineTests(unittest.TestCase):
         self.assertAlmostEqual(float(model.time_fs(mapped[-1])), 650, places=9)
 
     def test_lens_is_attached_to_the_live_molecule(self):
-        """The optical lens and tracked H/D source use current atom positions."""
+        """The lens magnifies live bond vectors while its carbon stays on the source."""
         for name in ["CH4", "CH3D"]:
-            for time in [3.4, 5.4, 8.0, 11.2, 12.4]:
-                _, points, centre, _, _ = model.lens_state(name, time)
-                np.testing.assert_array_equal(centre, points[0])
+            for time in [2.6, 3.0, 3.4, 5.4, 8.0, 11.2, 12.4]:
+                native, points, centre, _, _ = model.lens_state(name, time)
+                np.testing.assert_allclose(centre[:2], native[0], atol=1e-12)
+                scale = 1 + (model.LENS_MAG - 1) * model.lens_growth(time)
+                np.testing.assert_allclose(
+                    points[1:, :2] - centre[:2], scale * (native[1:] - native[0]), atol=1e-12
+                )
                 source, _, _, _ = model.nucleus_state(name, time)
                 np.testing.assert_array_equal(source, points[1])
 

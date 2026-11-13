@@ -1,0 +1,51 @@
+{
+  "source_calculation_sha256": "5d97c8818ef2da1a3c96636faacea9bc71db0cc313f8195fff07efbc101db46c",
+  "reference_calculation_sha256": "77850e8a72250f9fef195ef6e5844c017e2b7869851c6594a5a17e1af5b76726",
+  "unchanged_chemistry_source_sha256": "a4ae01750e5e38980ebd49e6d94c7bd55163dd6089908a35956ec482c31923ac",
+  "calculation_created_utc": "2026-11-11T15:27:32.516492+00:00",
+  "engine_version": "2.14.0",
+  "settings": {
+    "method": "B3LYP",
+    "basis": "def2-tzvp",
+    "grid_level": 6,
+    "scf_tolerance": 1e-12,
+    "orbital_gradient_tolerance": 1e-10,
+    "maximum_scf_cycles": 300,
+    "gradient_tolerance": 1e-06,
+    "finite_difference_step_bohr": 0.002,
+    "threads": 4,
+    "memory_mb": 2048
+  },
+  "scf_evaluations": 69,
+  "internal_stable": true,
+  "external_stable": true,
+  "maximum_gradient_hartree_per_bohr": 9.103828801926284e-14,
+  "maximum_hessian_asymmetry": 3.147150748339378e-08,
+  "maximum_reference_frequency_difference_cm1": 0.0022638780283159576,
+  "quality": {
+    "positive_physical_modes": true,
+    "mass_continuation_steps": 401,
+    "minimum_subspace_overlap": 0.999819250280369,
+    "maximum_half_step_frequency_change_cm1": 0.002974684972059549
+  },
+  "comparisons": [
+    {
+      "group_id": "symmetric_stretch_A1",
+      "shift_percent": 25.02697931197385,
+      "frequencies_cm1": {
+        "CH4": 3032.1385124864255,
+        "CH3D": 2273.285834256056
+      }
+    },
+    {
+      "group_id": "low_bend_E",
+      "shift_percent": 11.756505249425441,
+      "frequencies_cm1": {
+        "CH4": 1340.9304452060953,
+        "CH3D": 1183.2838870242967
+      }
+    }
+  ],
+  "reference_tracking_overlap": 0.9998192492201676,
+  "scope": "Existing complete quantum calculation; mode extraction rerun with current code. No new SCF calculations."
+}

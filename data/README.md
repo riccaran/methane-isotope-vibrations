@@ -28,11 +28,19 @@ The independently runnable `methane.chemistry` stage constructs an ideal
 tetrahedron, optimizes its bond length, checks every Cartesian force and
 electronic stability, and computes full Hessians at h and h/2. Its raw JSON is
 a fuller record with settings, timing, stability flags and sensitivity data.
+The sanitized reference omits the electronic-stability flags and h/2 Hessian;
+those checks cannot be repeated from this file. Missing checks are not zeros.
+The separate complete calculation in `validation/independent_calculation.json`
+supports the numerical sensitivity statement in the main README.
 
 ## `methane_modes.json`
 
-This frozen dataset preserves the exact mode basis used in the approved video.
-It is also the schema written by `python -m methane.modes` for a fresh run.
+This frozen dataset preserves the mode basis used in the approved video, with
+tracking quality recomputed by the current extractor. Fresh extraction uses
+the same scientific schema, with the normalization difference described below.
+The byte-exact original film input is retained separately in
+`validation/approved_video/source_data.json`; its historical quality field is
+not the current validation result.
 
 | Field | Meaning |
 |---|---|
@@ -94,3 +102,27 @@ accepted graphical basis. These are explicitly separate reproducibility goals.
 The film rounds these to **25.03%** and **11.76%**. They concern the two selected
 coordinates, not every methane vibration, a reaction rate or an observed
 astronomical line shift.
+
+## Validation artifacts
+
+All paths below are relative to the repository root. These small records are
+evidence, not additional simulation inputs for the default renderer.
+
+| File | Purpose |
+|---|---|
+| `validation/approved_video/source_data.json` | Exact original dataset associated with the unchanged approved MP4 |
+| `validation/approved_video/render_metadata.json.gz` | Original frame clocks and transition fields, compressed; retains the full original metadata hash |
+| `validation/approved_video/verification.json` | Reproduced encoded-film checks and hashes of video, source data, frame audit and digit atlas |
+| `validation/independent_calculation.json` | Previous complete from-scratch calculation, including stability flags and both Hessians |
+| `validation/numerical_audit.json` | Current re-extraction of that calculation, frequency comparisons and half-step sensitivity |
+| `validation/timer_digits.png` | Ten actual Manim glyphs in Consolas and DejaVu Sans Mono, normalized to 24 × 32 pixels, for restricted timer recognition |
+
+The compact frame audit omits molecular coordinates and presentation history.
+It preserves every frame's video time, phase, physical time, graph enlargement
+and timer opacity. The original run has one extra terminal-state sample after
+the last encoded frame; the verifier checks and reports that convention.
+New renders emit exactly one metadata sample per encoded frame.
+
+The numerical audit reuses the recorded electronic calculation; it does not
+claim a new SCF run. The sanitized reference's missing stability and half-step
+checks remain unavailable, even though the independent calculation has them.

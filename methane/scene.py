@@ -745,9 +745,7 @@ class MethaneComparison(Scene):
             m.clear_updaters()
         # Metadata records video time, model time and physical phase independently.
         frames = []
-        for wall_time in np.r_[
-            np.arange(0, physics.VIDEO_END_TIME, 1 / physics.FPS), physics.VIDEO_END_TIME
-        ]:
+        for wall_time in np.arange(round(physics.VIDEO_END_TIME * physics.FPS)) / physics.FPS:
             v = physics.comparison_model_time(wall_time)
             row = {
                 "v": float(wall_time),
@@ -898,7 +896,7 @@ class MethaneComparison(Scene):
             "selected_omega": physics.TARGET_OMEGA,
             "field_definitions": serialized,
             "frames": frames,
-            "new_quantum_jobs": 0,
+            "new_quantum_jobs": int(os.environ.get("METHANE_NEW_QUANTUM_JOBS", "0")),
         }
         METADATA_PATH.write_text(json.dumps(meta), encoding="utf-8")
 

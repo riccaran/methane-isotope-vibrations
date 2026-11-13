@@ -37,11 +37,48 @@ def load_dataset(path):
                 raise ValueError(f"Invalid numerical field: {key}")
         if min(record["masses_amu"]) <= 0 or min(record["frequencies_cm1"]) <= 0:
             raise ValueError("Masses and physical frequencies must be positive")
-    if len(dataset["comparisons"]) != 2:
-        raise ValueError("The scene expects one stretch and one bend comparison")
+        if np.any(np.linalg.norm(record["cartesian_modes"], axis=(1, 2)) == 0):
+            raise ValueError("Mode vectors must be nonzero")
+    h, d = [dataset["isotopologues"][name] for name in ["CH4", "CH3D"]]
+    expected_h = np.array([12] + [1.007825032] * 4)
+    expected_d = expected_h.copy()
+    expected_d[1] = 2.01410177812
+    if (
+        not np.array_equal(h["coordinates_angstrom"], d["coordinates_angstrom"])
+        or not np.allclose(h["masses_amu"], expected_h, rtol=0, atol=1e-9)
+        or not np.allclose(d["masses_amu"], expected_d, rtol=0, atol=1e-9)
+    ):
+        raise ValueError("Expected common geometry and deuterium only at atom 1")
+    if [pair.get("group_id") for pair in dataset["comparisons"]] != [
+        "symmetric_stretch_A1",
+        "low_bend_E",
+    ]:
+        raise ValueError("Comparisons must be ordered symmetric stretch, lower E bend")
+    conventions = dataset["display_conventions"]
+    index = conventions["stretch_raw_index_zero_based"]
+    if (
+        conventions["substituted_atom_zero_based"] != 1
+        or not isinstance(index, int)
+        or not 0 <= index < 9
+        or abs(
+            h["frequencies_cm1"][index] - dataset["comparisons"][0]["cases"]["CH4"]["frequency_cm1"]
+        )
+        > 0.01
+    ):
+        raise ValueError("Display conventions do not identify the selected stretch and isotope")
     for comparison in dataset["comparisons"]:
         for name in ["CH4", "CH3D"]:
             case = comparison["cases"][name]
+            frequency = case["frequency_cm1"]
+            if (
+                not np.isfinite(frequency)
+                or frequency <= 0
+                or np.min(
+                    abs(np.array(dataset["isotopologues"][name]["frequencies_cm1"]) - frequency)
+                )
+                > 0.01
+            ):
+                raise ValueError("Selected frequency is not a positive physical mode")
             vector = np.asarray(case["cartesian_mode_unit_norm"], dtype=float)
             if (
                 vector.shape != (5, 3)
@@ -73,6 +110,7 @@ CASES = {
     name: dict(record, frequency_cm1=PAIRS[0]["cases"][name]["frequency_cm1"])
     for name, record in DATA["isotopologues"].items()
 }
+STRETCH_INDEX = DATA["display_conventions"]["stretch_raw_index_zero_based"]
 SELECTED_ROTATION = np.array(DATA["selected_orientation"])
 WHITE = "#EDF0F3"
 GOLD = "#E4C58A"
@@ -145,7 +183,7 @@ for name in CASES:
         p = np.array(PAIRS[k]["cases"][name]["cartesian_mode_unit_norm"])
         p /= np.linalg.norm(p, axis=1).max()
         PURE[k, name] = p
-    u[5] = PURE[0, name]
+    u[STRETCH_INDEX] = PURE[0, name]
     VECTORS[name] = u
     FREQUENCIES[name] = np.array(raw["frequencies_cm1"]) / FREF
 
@@ -341,7 +379,7 @@ def phases(index):
     display amplitudes are artistic choices, not a sampled thermal ensemble."""
     p = np.random.default_rng(59801 + index).uniform(0, 2 * np.pi, 9)
     if index == 0:
-        p[5] = 0
+        p[STRETCH_INDEX] = 0
     return p
 
 

@@ -751,7 +751,7 @@
   "quality": {
     "positive_physical_modes": true,
     "mass_continuation_steps": 401,
-    "minimum_subspace_overlap": 0.9999999999999998,
+    "minimum_subspace_overlap": 0.9998192492201676,
     "maximum_half_step_frequency_change_cm1": null
   },
   "display_conventions": {
@@ -760,5 +760,8 @@
     "degenerate_frequency_tolerance_cm1": 0.01,
     "degenerate_basis": "C3 A1/E separation and SVD parallel transport"
   },
-  "provenance": "Frozen reference inputs for the approved film; regenerate independently with methane.chemistry and methane.modes"
+  "provenance": {
+    "source_calculation_sha256": "77850e8a72250f9fef195ef6e5844c017e2b7869851c6594a5a17e1af5b76726",
+    "note": "Frozen graphical basis; quality recomputed by the current extractor. Exact original film input is validation/approved_video/source_data.json."
+  }
 }
