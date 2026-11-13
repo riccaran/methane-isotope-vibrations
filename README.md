@@ -14,6 +14,21 @@ The animation is a computational illustration of the molecular isotope effect ([
 
 ## Results
 
+The nine harmonic modes form four frequency levels in CH₄ and six in CH₃D.
+The table follows their corresponding branches under isotope substitution;
+E and T₂ denote twofold and threefold degeneracy. Degenerate-level means are
+used before rounding. These are **calculated harmonic B3LYP/def2-TZVP frequencies,
+not experimental values**. The film compares only the two rows marked **Yes**.
+
+| CH₄ level | CH₄ / cm⁻¹ | CH₃D level | CH₃D / cm⁻¹ | Frequency reduction | In the film |
+|---|---:|---|---:|---:|:---:|
+| ν₄ (T₂) | 1340.93 | ν₃ (A₁) | 1335.39 | 0.41% | — |
+| ν₄ (T₂) | 1340.93 | ν₆ (E) | 1183.28 | **11.76%** | **Yes** |
+| ν₂ (E) | 1556.45 | ν₅ (E) | 1495.89 | 3.89% | — |
+| ν₁ (A₁) | 3032.14 | ν₂ (A₁), C–D stretch | 2273.29 | **25.03%** | **Yes** |
+| ν₃ (T₂) | 3134.71 | ν₁ (A₁) | 3061.69 | 2.33% | — |
+| ν₃ (T₂) | 3134.71 | ν₄ (E) | 3134.44 | 0.01% | — |
+
 ### 1. Isotopic substitution on a common potential-energy surface
 
 Deuterium has the same nuclear charge as hydrogen (¹H) but roughly twice its mass.
@@ -70,8 +85,8 @@ different amount.
 
 | Selected comparison | CH₄ / cm⁻¹ | CH₃D / cm⁻¹ | Frequency reduction |
 |---|---:|---:|---:|
-| Symmetric-stretch branch | 3032.1384163 | 2273.2854142 | **25.03%** |
-| Lower E-bend component | 1340.9286711 | 1183.2824173 | **11.76%** |
+| Symmetric-stretch branch | 3032.14 | 2273.29 | **25.03%** |
+| Lower E-bend component | 1340.93 | 1183.28 | **11.76%** |
 
 For each pair of corresponding vibrational modes, the relative frequency reduction is
 
@@ -317,6 +332,10 @@ fitting or added dispersion. SCF energy/orbital-gradient tolerances are
 optimized geometry. A radial optimum alone is insufficient: stability and all
 nine physical curvatures are also checked.
 
+PySCF 2.14.0's default `B3LYP` uses the Gaussian-compatible convention with
+VWN-RPA (`VWN3`) local correlation, as specified in the
+[versioned source](https://github.com/pyscf/pyscf/blob/v2.14.0/pyscf/dft/xcfun.py#L197-L224).
+
 **Isotopes.** Both species have the same nuclear charges, electronic Hessian
 and equilibrium geometry in this Born–Oppenheimer harmonic model. Only one
 nuclear mass changes. Six rigid-motion coordinates are removed in mass-weighted
@@ -432,9 +451,3 @@ private reports, intermediate renders, vendored executables or application code.
 - [PySCF: density-functional theory](https://pyscf.org/user/dft.html)
 - [PySCF: harmonic vibrational analysis](https://pyscf.org/_modules/pyscf/hessian/thermo.html#harmonic_analysis)
 - [Manim Community documentation](https://docs.manim.community/en/stable/)
-
-## License
-
-The code and included project-generated data/media are released under the
-[MIT License](LICENSE). Referenced papers and third-party dependencies retain
-their own licenses.

@@ -24,6 +24,13 @@ SCF energy tolerance 10^-12 Hartree and orbital-gradient tolerance 10^-10.
 The Cartesian Hessian uses central differences of grid-response gradients with
 h = 0.002 bohr. The reference geometry is stationary within 10^-6 Hartree/bohr.
 
+In PySCF 2.14.0, default `B3LYP` uses VWN-RPA local correlation, identified by
+the `VWN3`/`VWNRPA` aliases in the
+[Libxc interface](https://github.com/pyscf/pyscf/blob/v2.14.0/pyscf/dft/libxc.py#L153-L199).
+The [XCFun definition](https://github.com/pyscf/pyscf/blob/v2.14.0/pyscf/dft/xcfun.py#L197-L224)
+explicitly specifies this Gaussian-compatible VWN3 form. The calculation
+environment has `B3LYP_WITH_VWN5` disabled; the VWN5 variant is not used.
+
 The independently runnable `methane.chemistry` stage constructs an ideal
 tetrahedron, optimizes its bond length, checks every Cartesian force and
 electronic stability, and computes full Hessians at h and h/2. Its raw JSON is
@@ -96,12 +103,14 @@ accepted graphical basis. These are explicitly separate reproducibility goals.
 
 | Selected coordinate | CH4 / cm^-1 | CH3D / cm^-1 | Fewer cycles in CH3D |
 |---|---:|---:|---:|
-| Symmetric-stretch branch | 3032.1384163 | 2273.2854142 | 25.0269908% |
-| Lower E-bend component | 1340.9286711 | 1183.2824173 | 11.7564981% |
+| Symmetric-stretch branch | 3032.138 | 2273.285 | 25.03% |
+| Lower E-bend component | 1340.929 | 1183.282 | 11.76% |
 
-The film rounds these to **25.03%** and **11.76%**. They concern the two selected
-coordinates, not every methane vibration, a reaction rate or an observed
-astronomical line shift.
+Degenerate levels are numerically split by up to about 10⁻³ cm⁻¹, so further
+decimal places are not significant.
+
+These reductions concern the two selected coordinates shown in the film, not
+every methane vibration, a reaction rate or an observed astronomical line shift.
 
 ## Validation artifacts
 
