@@ -35,8 +35,8 @@ def load_dataset(path):
             values = np.asarray(record[key], dtype=float)
             if values.shape != shape or not np.all(np.isfinite(values)):
                 raise ValueError(f"Invalid numerical field: {key}")
-        if min(record["masses_amu"]) <= 0 or min(record["frequencies_cm1"]) <= 0:
-            raise ValueError("Masses and physical frequencies must be positive")
+        if min(record["frequencies_cm1"]) <= 0:
+            raise ValueError("Physical frequencies must be positive")
         if np.any(np.linalg.norm(record["cartesian_modes"], axis=(1, 2)) == 0):
             raise ValueError("Mode vectors must be nonzero")
     h, d = [dataset["isotopologues"][name] for name in ["CH4", "CH3D"]]
@@ -383,6 +383,12 @@ def phases(index):
     return p
 
 
+def mode_displacement(name, k, q, amplitude):
+    """Return one selected mode's displayed Cartesian displacement in angstrom."""
+    frequency = PAIRS[k]["cases"][name]["frequency_cm1"]
+    return amplitude * np.sin(np.pi * frequency / FREF * q) * PURE[k, name]
+
+
 def local_atoms(name, v, index=0, branch=0):
     """Return (5,3) instantaneous Cartesian coordinates in angstrom.
 
@@ -397,21 +403,14 @@ def local_atoms(name, v, index=0, branch=0):
     )
     if index != 0:
         return eq + mixed
-    pair = sum(
-        (
-            0.15
-            * np.sin(np.pi * PAIRS[k]["cases"][name]["frequency_cm1"] / FREF * q)
-            * PURE[k, name]
-            for k in [0, 1]
-        )
-    )
+    pair = sum(mode_displacement(name, k, q, 0.15) for k in (0, 1))
     isolate_pair = float(ease((v - (FOCUS_END - 1.5)) / 1.5))
     combined = (1 - isolate_pair) * mixed + isolate_pair * pair
     if branch == 0:
         return eq + combined
     k = 0 if branch == 1 else 1
     split = separation(v)
-    pure = 0.3 * np.sin(np.pi * PAIRS[k]["cases"][name]["frequency_cm1"] / FREF * q) * PURE[k, name]
+    pure = mode_displacement(name, k, q, 0.3)
     return eq + (1 - split) * combined + split * pure
 
 

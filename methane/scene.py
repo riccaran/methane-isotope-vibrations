@@ -42,6 +42,17 @@ config.background_color = physics.BG
 config.disable_caching = True
 
 
+def atom_colour(name, index):
+    """Colour only the substituted hydrogen/deuterium site gold."""
+    return physics.GOLD if name == "CH3D" and index == 1 else physics.WHITE
+
+
+def bond_group(name, width):
+    """Build four reusable C-H/C-D bond lines with the requested stroke width."""
+    return VGroup(*(Line(LEFT, RIGHT, stroke_color=atom_colour(name, i), stroke_width=width)
+                    for i in range(1, 5)))
+
+
 def clip_line(line, lo, hi):
     """Clip a drawn bond segment to the horizontal isotope-panel bounds.
 
@@ -75,25 +86,11 @@ class FieldMolecule(VGroup):
         super().__init__()
         self.name = name
         self.d = d
-        self.bonds = VGroup(
-            *[
-                Line(
-                    LEFT,
-                    RIGHT,
-                    stroke_color=physics.GOLD if name == "CH3D" and i == 1 else physics.WHITE,
-                    stroke_width=1.6,
-                )
-                for i in range(1, 5)
-            ]
-        )
+        self.bonds = bond_group(name, 1.6)
         self.add(self.bonds)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
+        """Update existing graphics from model seconds v and return self."""
         opacity = physics.background_opacity(v)
         points = physics.field_positions(self.name, v, self.d)
         lo, hi = (-8, 0) if self.name == "CH4" else (0, 8)
@@ -119,21 +116,11 @@ class SelectedMolecule(VGroup):
         super().__init__()
         self.name = name
         self.branch = branch
-        self.bonds = VGroup(
-            *[
-                Line(
-                    LEFT,
-                    RIGHT,
-                    stroke_color=physics.GOLD if name == "CH3D" and i == 1 else physics.WHITE,
-                    stroke_width=2.0,
-                )
-                for i in range(1, 5)
-            ]
-        )
+        self.bonds = bond_group(name, 2.0)
         self.nodes = VGroup(
             *[
                 Dot(
-                    radius=0.022, color=physics.GOLD if name == "CH3D" and i == 1 else physics.WHITE
+                    radius=0.022, color=atom_colour(name, i)
                 )
                 for i in range(5)
             ]
@@ -144,7 +131,7 @@ class SelectedMolecule(VGroup):
                     "C" if i == 0 else "D" if name == "CH3D" and i == 1 else "H",
                     font=MONO_FONT,
                     font_size=24,
-                    color=physics.GOLD if name == "CH3D" and i == 1 else physics.WHITE,
+                    color=atom_colour(name, i),
                 )
                 for i in range(5)
             ]
@@ -154,11 +141,7 @@ class SelectedMolecule(VGroup):
         self.set_z_index(5)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
+        """Update existing graphics from model seconds v and return self."""
         if self.branch == -1 and v < physics.SPLIT_START:
             self.set_opacity(0)
             return self
@@ -218,12 +201,8 @@ class LensContext(VGroup):
         self.set_z_index(3)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
-        native, points, c, r, label = physics.lens_state(self.name, v)
+        """Update existing graphics from model seconds v and return self."""
+        _, _, c, r, label = physics.lens_state(self.name, v)
         g = physics.lens_growth(v)
         a = physics.text_opacity(v)
         self.disc.scale_to_fit_width(2 * r).move_to(c).set_stroke(
@@ -251,11 +230,7 @@ class Selection(VGroup):
         self.set_z_index(6)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
+        """Update existing graphics from model seconds v and return self."""
         c = np.r_[
             physics.native_selected(self.name, v)[0] + [-4 if self.name == "CH4" else 4, 0], 0
         ]
@@ -332,11 +307,7 @@ class NuclearMagnifier(VGroup):
         self.set_z_index(12)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
+        """Update existing graphics from model seconds v and return self."""
         source, centre, r, g = physics.nucleus_state(self.name, v)
         visible = float(physics.NUCLEUS_START < v < physics.NUCLEUS_END)
         self.halo.move_to(source).set_stroke(opacity=0.85 * visible)
@@ -401,24 +372,11 @@ class ComponentGuide(VGroup):
         self.set_z_index(9)
 
     def draw(self, v):
-        """Update this object in place from model seconds v.
-
-        All positions and opacities are evaluated analytically at the supplied
-        time; no independent per-object phase or accumulated numerical drift is used.
-        Return self for Manim updater chaining."""
+        """Update existing graphics from model seconds v and return self."""
         alpha = physics.guide_weights(v)[self.k]
         self.label.set_opacity(alpha)
         local, points = physics.selected_positions(self.name, v, 1)
-        disp = (
-            0.15
-            * np.sin(
-                np.pi
-                * physics.PAIRS[self.k]["cases"][self.name]["frequency_cm1"]
-                / physics.FREF
-                * float(physics.phase_clock(v))
-            )
-            * physics.PURE[self.k, self.name]
-        )
+        disp = physics.mode_displacement(self.name, self.k, float(physics.phase_clock(v)), 0.15)
         tip_local = local + 2.2 * disp
         tip_xy = physics.FOCUS_SCALE * physics.projected_vectors(
             tip_local, physics.selected_orientation(v)
@@ -482,33 +440,16 @@ class MethaneComparison(Scene):
         timer = ValueTracker(0)
         definitions = physics.field_definitions()
         for name in ["CH4", "CH3D"]:
-            for d in definitions:
-                m = FieldMolecule(name, d)
-                m.add_updater(lambda obj: obj.draw(timer.get_value()))
-                m.draw(0)
-                self.add(m)
-            lens = LensContext(name)
-            lens.add_updater(lambda obj: obj.draw(timer.get_value()))
-            lens.draw(0)
-            self.add(lens)
-            for branch in [1, -1]:
-                m = SelectedMolecule(name, branch)
-                m.add_updater(lambda obj: obj.draw(timer.get_value()))
-                m.draw(0)
-                self.add(m)
-            marker = Selection(name)
-            marker.add_updater(lambda obj: obj.draw(timer.get_value()))
-            marker.draw(0)
-            self.add(marker)
-            nuclear = NuclearMagnifier(name)
-            nuclear.add_updater(lambda obj: obj.draw(timer.get_value()))
-            nuclear.draw(0)
-            self.add(nuclear)
-            for k in [0, 1]:
-                guide = ComponentGuide(name, k)
-                guide.add_updater(lambda obj: obj.draw(timer.get_value()))
-                guide.draw(0)
-                self.add(guide)
+            objects = (
+                *[FieldMolecule(name, d) for d in definitions], LensContext(name),
+                *[SelectedMolecule(name, branch) for branch in (1, -1)],
+                Selection(name), NuclearMagnifier(name),
+                *[ComponentGuide(name, k) for k in (0, 1)],
+            )
+            for obj in objects:
+                obj.add_updater(lambda item: item.draw(timer.get_value()))
+                obj.draw(0)
+                self.add(obj)
             header = (
                 Text(
                     "CH₄" if name == "CH4" else "CH₃D",
@@ -583,7 +524,7 @@ class MethaneComparison(Scene):
             def baseline(m, k=k):
                 """Update one plot baseline from the shared graphical geometry."""
                 v = timer.get_value()
-                sx, cy, amp = physics.plot_geometry(v, k)
+                sx, cy, _ = physics.plot_geometry(v, k)
                 m.put_start_and_end_on([-6.9 * sx, cy, 0], [6.9 * sx, cy, 0]).set_stroke(
                     opacity=physics.plots_visible(v)
                 )
@@ -602,7 +543,7 @@ class MethaneComparison(Scene):
                 """Position the mode name above its own plot row as that row enlarges."""
                 v = timer.get_value()
                 u = physics.graph_focus(v)
-                sx, cy, amp = physics.plot_geometry(v, k)
+                sx, cy, _ = physics.plot_geometry(v, k)
                 m.scale_to_fit_height(h * (1 + 0.25 * u)).move_to(
                     [-6.9 * sx, cy + 0.4 + 0.45 * u, 0], aligned_edge=LEFT
                 ).set_opacity(physics.plots_visible(v))
@@ -769,7 +710,7 @@ class MethaneComparison(Scene):
                 "cases": {},
             }
             for name in ["CH4", "CH3D"]:
-                native, displayed, c, r, label = physics.lens_state(name, float(v))
+                native, _, c, r, label = physics.lens_state(name, float(v))
                 row["cases"][name] = {
                     "native_points": native.tolist(),
                     "lens_centre": c.tolist(),
@@ -793,108 +734,28 @@ class MethaneComparison(Scene):
                         "projected_scene": points.tolist(),
                     }
             frames.append(row)
-        serialized = [
-            {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in d.items()}
-            for d in definitions
-        ]
+        # Keep reproducibility inputs and per-frame physics; omit editorial change history.
         meta = {
-            "fps": physics.FPS,
-            "width": 1920,
-            "height": 1080,
+            "fps": physics.FPS, "width": 1920, "height": 1080,
             "active_seconds": physics.VIDEO_END_TIME,
             "model_end_seconds": physics.END_TIME,
             "comparison_extra_seconds": physics.COMPARISON_EXTRA_SECONDS,
-            "comparison_original_interval": [physics.PLOTS_START, physics.GRAPH_FOCUS_START],
-            "comparison_video_interval": [
-                physics.PLOTS_START,
-                physics.GRAPH_FOCUS_START + physics.COMPARISON_EXTRA_SECONDS,
-            ],
-            "comparison_retiming": "v - 2*smootherstep((v-34)/(original_graph_zoom+2-34)); unit speed at both joins",
-            "hold_seconds": physics.HOLD,
             "scene_duration_seconds": self.time,
             "source_data_sha256": hashlib.sha256(physics.DATA_PATH.read_bytes()).hexdigest(),
-            "captions_full_opacity_interval": [3.8, physics.FOCUS_START - 0.4],
-            "captions_full_seconds": physics.FOCUS_START - 0.4 - 3.8,
-            "molecular_lens_names": ["Hydrogen (H)", "Deuterium (D)"],
-            "redundant_explanation_lines_removed": True,
-            "lens_interval": [physics.LENS_START, physics.FOCUS_START],
-            "focus_interval": [physics.FOCUS_START, physics.FOCUS_END],
-            "nuclear_inset_interval": [physics.NUCLEUS_START, physics.NUCLEUS_END],
-            "nuclear_full_interval": [physics.NUCLEUS_FULL, physics.NUCLEUS_CLOSE],
-            "nuclear_diagrammatic": True,
-            "nuclear_frame_offset_from_carbon": physics.NUCLEUS_OFFSET.tolist(),
-            "nucleon_labels": ["p", "n"],
-            "nucleon_highlights": False,
-            "mode_intro_text": list(physics.MODE_INTRO_TEXT),
-            "mode_comparison_captions": [
-                [m.original_text for m in mode_comparison_caption(k, y)]
-                for k, y in [(0, 2.05), (1, -0.75)]
-            ],
-            "mode_intro_full_interval": [physics.SLOW_START + 0.8, physics.SLOW_END - 0.8],
-            "nucleus_delay_after_molecular_lens_full_s": physics.NUCLEUS_START - physics.LENS_FULL,
-            "focus_delay_after_nucleus_closed_s": physics.FOCUS_START - physics.NUCLEUS_END,
-            "rendered_label_strings": sorted(
-                set(
-                    (
-                        m.text
-                        for root in self.mobjects
-                        for m in root.get_family()
-                        if isinstance(m, Text) and m.text != "."
-                    )
-                )
-            ),
-            "slowdown_interval": [physics.SLOW_START, physics.SLOW_END],
-            "phase_rate_start": physics.INITIAL_RATE,
-            "phase_rate_end": physics.FINAL_RATE,
-            "guide_bend_interval": [physics.BEND_START, physics.STRETCH_START],
-            "guide_stretch_interval": [physics.STRETCH_START, physics.GUIDE_END],
-            "guide_changes_molecular_motion": False,
-            "no_reacceleration": False,
-            "original_slowdown_preserved": True,
-            "timer_starts_s": physics.SLOW_START,
-            "split_interval": [physics.SPLIT_START, physics.PLOTS_START],
-            "plots_start_s": physics.PLOTS_START,
-            "final_timer_text": None,
-            "timer_hidden_from_fs": physics.GRAPH_FOCUS_FS,
-            "timer_hide_s": physics.GRAPH_FOCUS_START + physics.COMPARISON_EXTRA_SECONDS,
-            "physical_clock_continues_to_video_end": True,
-            "last_encoded_elapsed_fs": float(
-                physics.time_fs(
-                    physics.comparison_model_time(physics.VIDEO_END_TIME - 1 / physics.FPS)
-                )
-            ),
-            "plot_window_q": 8.0,
-            "plot_window_fs": 8 * physics.FS_PER_Q,
-            "initial_field_velocity": physics.TARGET_VELOCITY.tolist(),
-            "selected_axis": physics.TARGET_AXIS.tolist(),
             "graph_focus_interval": [
                 physics.GRAPH_FOCUS_START + physics.COMPARISON_EXTRA_SECONDS,
                 physics.GRAPH_FOCUS_END + physics.COMPARISON_EXTRA_SECONDS,
             ],
             "graph_focus_start_fs": physics.GRAPH_FOCUS_FS,
-            "nonplot_fade_end_s": physics.GRAPH_FOCUS_START
-            + physics.COMPARISON_EXTRA_SECONDS
-            + 0.9,
-            "final_text": list(physics.FINAL_TEXT),
-            "final_text_font_size": physics.FINAL_TEXT_SIZE,
-            "final_text_y": list(physics.FINAL_TEXT_Y),
-            "removed_final_headline": True,
-            "nuclear_full_seconds": physics.NUCLEUS_CLOSE - physics.NUCLEUS_FULL,
-            "nuclear_hold_reduction_seconds": 0.0,
-            "final_reading_reduction_seconds": 0.0,
-            "reading_seconds_requested": physics.READING_SECONDS,
-            "final_text_full_interval": [
-                physics.GRAPH_FOCUS_END + physics.COMPARISON_EXTRA_SECONDS + 0.4,
-                physics.VIDEO_END_TIME + physics.HOLD,
+            "mode_comparison_captions": [[m.original_text for m in row] for row in rows],
+            "rendered_label_strings": sorted({
+                m.text for root in self.mobjects for m in root.get_family()
+                if isinstance(m, Text) and m.text != "."
+            }),
+            "field_definitions": [
+                {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in d.items()}
+                for d in definitions
             ],
-            "shared_legend_count": 1,
-            "shared_legend_labels": [
-                m.original_text for m in legend.get_family() if isinstance(m, Text)
-            ],
-            "final_plot_amplitude_scale": 3.0,
-            "final_plot_row_centres": [1.05, -1.05],
-            "selected_omega": physics.TARGET_OMEGA,
-            "field_definitions": serialized,
             "frames": frames,
             "new_quantum_jobs": int(os.environ.get("METHANE_NEW_QUANTUM_JOBS", "0")),
         }
