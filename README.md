@@ -12,6 +12,9 @@ The astronomical motivation is the unusually deuterium-rich methane reported
 in interstellar comet **3I/ATLAS** by [Roth and colleagues](https://arxiv.org/abs/2603.20445v3).
 The animation is a computational illustration of the molecular isotope effect ([full movie](media/methane-isotope-effect.mp4)).
 
+This is an isolated-molecule harmonic model. It does not fit the comet's spectrum,
+assign the displayed vibrations to observed JWST lines, or infer the comet's origin.
+
 ## Results
 
 The nine harmonic modes form four frequency levels in CH₄ and six in CH₃D.
@@ -149,25 +152,14 @@ amplitudes and initial phases are illustrative choices.
 The initial GIF uses 30 fps to sample the fast displayed vibrations; the three
 already slowed chapters use 12 fps. The complete MP4 retains all 60 fps.
 
-## Two reproducibility paths
+## Reproducibility and validation
 
-| Path | Input | What it reproduces |
-|---|---|---|
-| **Reference rendering** | Checked-in `data/methane_modes.json` | The accepted numerical mode basis, scene and timing |
-| **From scratch** | A tetrahedron constructed by Python | A new optimized geometry, Hessians, extracted modes and rendered film |
-
-The from-scratch path does not read the frozen mode dataset or reference
-Hessian to perform its quantum calculation. It generates its own data and
-passes them directly to the renderer. The reference path avoids repeating
-an expensive calculation when working only on graphics.
-
+The from-scratch workflow generates its own geometry, Hessians and mode dataset.
 Fresh calculations can differ in the last numerical digits and in the chosen
-basis within degenerate mode spaces. The frozen data preserve the exact
-graphical basis of the approved film; a fresh run reproduces the scientific
-comparison without promising byte-identical media. Fonts and encoder versions
-can also change pixels across platforms.
+basis within degenerate mode spaces. Fonts and encoder versions can also change
+pixels, so generated media need not be byte-identical to the included film.
 
-## Install
+### Installation
 
 Use **Python 3.12** and install the native dependencies described in the
 [Manim installation guide](https://docs.manim.community/en/stable/installation.html).
@@ -184,7 +176,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-For a new quantum calculation, also install the optional quantum requirements:
+Also install the quantum requirements for this workflow:
 
 ```bash
 python -m pip install -r requirements-qm.txt
@@ -199,7 +191,7 @@ them, the renderer selects **DejaVu Sans** and **DejaVu Sans Mono**; install
 these open fonts if your environment does not already provide them. Font
 substitution affects typography, not the computed frequencies or phase.
 
-## Run the entire pipeline from zero
+### Run the entire pipeline from zero
 
 From the repository root, in an environment containing both requirement sets:
 
@@ -219,6 +211,9 @@ The command performs every dependent stage in order:
 7. Tracks matching A1/E subspaces and selects the two displayed comparisons.
 8. Renders the full film, normalizes timestamps without reencoding its images,
    decodes and verifies the movie, then generates the four GIF chapters.
+
+The pipeline renders at **60 fps**, as required by the scene's frame-aligned
+endpoint.
 
 Outputs are kept under `build/run/`:
 
@@ -247,17 +242,11 @@ reused only when its input, source fingerprints and output hashes match.
 Exported video stays under a `.pending.mp4` name until verification and any
 requested previews succeed. The final MP4 is never overwritten.
 
-To use an existing electronic calculation in a new work directory:
-
-```bash
-python tools/render.py --calculation build/calculation.json --work-dir build/reused-calculation
-```
-
 The default quantum resource settings are **four CPU threads and 2048 MB** of
 PySCF memory allowance, adjustable with `--threads` and `--memory-mb`. A full
 calculation and render take minutes, rather than being an instant visualization.
 
-### Windows with a separate WSL quantum environment
+#### Windows with a separate WSL quantum environment
 
 The renderer may stay native on Windows while PySCF runs under Ubuntu/WSL.
 Create the rendering environment from PowerShell:
@@ -286,42 +275,23 @@ drive paths. It passes argument arrays directly, so spaces in repository paths
 do not become shell-quoting problems. `--wsl-distribution` selects a distribution
 other than the default `Ubuntu`.
 
-## Run individual stages
+### Validation
 
-Rebuild the accepted reference scene without a quantum recalculation:
-
-```bash
-python tools/render.py --work-dir build/reference
-```
-
-Calculate and extract independently:
+Run the fast numerical and rendering checks without repeating DFT:
 
 ```bash
-python -m methane.chemistry --output build/new-calculation.json
-python -m methane.modes --input build/new-calculation.json --output build/new-modes.json
-python tools/render.py --data build/new-modes.json --work-dir build/new-render
+python -m unittest discover -s tests -v
 ```
 
-Repeat only the numerical extraction from the small reference Hessian:
+The suite checks isotope frequencies and mode extraction, geometry, physical
+timing, waveforms and rendering recovery. The full pipeline also verifies the
+encoded video automatically.
 
-```bash
-python -m methane.modes --input data/reference_calculation.json --output build/reextracted.json
-```
-
-Make a quick still preview of the accepted split scene:
-
-```bash
-python -m manim --config_file manim.cfg --save_last_frame --fps 60 --media_dir build/still methane/scene.py ComparisonStill
-```
-
-Generate new GIFs from the included approved film without changing that film:
-
-```bash
-python tools/previews.py --output-dir build/readme-previews
-```
-
-All rendering commands use **60 fps**. The scene rejects a different frame
-rate because its endpoint is deliberately rounded on the 60 fps grid.
+An independent calculation reproduced the two displayed reductions to **25.03%**
+and **11.76%**; halving the Hessian displacement changed frequencies by at most
+about **0.003 cm⁻¹**. The [numerical audit](validation/numerical_audit.json) and
+[approved-film verification](validation/approved_video/verification.json) retain
+the supporting results; their scope is explained in [data/README.md](data/README.md).
 
 ## Numerical method and visual conventions
 
@@ -369,60 +339,6 @@ The extra comparison time uses a quintic map with unit speed and zero mapping
 acceleration at its joins. It extends the completed split comparison from about
 8.17 to 10.17 seconds while preserving the **650 fs** plot-zoom trigger and the
 continuous final phase.
-
-## Validation
-
-Run the fast suite without launching another DFT calculation:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-The tests check the constructed tetrahedron, all nine isotope frequencies from
-the reference Hessian, mass-weighted orthogonality and centre-of-mass invariance,
-the exact mass substitution, caption ratios, physical-period repetition of
-atomic motion, clock derivatives, smooth extra-time joins and live lens
-attachment. They also reject malformed datasets and enforce docstrings for
-every shipped module, class and named function. README links, GIF motion,
-sampling of the fast opening, and retained mode colours are checked as well.
-Full extraction tests cover isotope tracking, degenerate subspaces, selected
-directions and quality metadata. Encoded-frame tests (when PyAV is installed)
-read timer digits and reject incorrect wave colours/phases. Runner tests check
-failure recovery, input invalidation and protection of unverified output.
-
-`tools/render.py` automatically runs the encoded-film verifier. It independently
-recomputes the clock rather than importing the model's clock function, decodes
-every video frame, checks 60 fps timestamps, timer digits and its disappearance
-at the 650 fs boundary, and tests each visible waveform's phase and isotope
-colour, excluding occluded crossings. Every final adjacent wave
-crop must keep changing, including the last frame pair.
-
-Recheck the included film using its original input and compact frame metadata:
-
-```bash
-python tools/verify_render.py --video media/methane-isotope-effect.mp4 --data validation/approved_video/source_data.json --metadata validation/approved_video/render_metadata.json.gz --output build/approved-verification.json
-```
-
-The from-scratch quantum stage also reports the two-step Hessian sensitivity.
-The independently validated calculation reproduced shifts of **25.02698%** and
-**11.75651%**, agreeing with the reference values at the displayed precision;
-its maximum h-to-h/2 frequency change was about **0.003 cm⁻¹**.
-The complete raw calculation and a newly reproduced numerical audit are in
-[`validation/`](validation/numerical_audit.json); the original-film verification
-is [also retained](validation/approved_video/verification.json) with input and
-video hashes. See [the data documentation](data/README.md) for their scope.
-
-## Scope of the astronomical connection
-
-3I/ATLAS was discovered by ATLAS in Chile in July 2025; its trajectory established
-an interstellar origin. JWST observations subsequently supplied the methane
-isotope result discussed by Roth and colleagues.
-
-This repository calculates isolated-molecule harmonic motion. It does not fit
-the comet's spectrum, calculate band intensities, assign the displayed modes
-to the observed JWST lines, or infer the comet's birthplace from an animation.
-Origin hypotheses rely on measured isotope abundances and astrochemical models.
-The contribution here is a transparent, reproducible scientific visualization.
 
 ## File map
 
